@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>College Bus Travel Slot Selector</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start; /* Align to top to allow scrolling */
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            width: 100%;
+            max-width: 800px;
+            margin-top: 20px; /* Add some margin from the top */
+            margin-bottom: 20px; /* Add some margin at the bottom */
+        }
+        .slot-button {
+            transition: all 0.2s ease-in-out;
+        }
+        .slot-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+        .slot-button.selected {
+            background-color: #4f46e5; /* Indigo-600 */
+            color: white;
+            border-color: #4f46e5;
+        }
+        .date-option input[type="radio"]:checked + label {
+            background-color: #4f46e5;
+            color: white;
+            border-color: #4f46e5;
+        }
+        .vote-count-bar {
+            background-color: #e0e7ff; /* Indigo-100 */
+            border-radius: 5px;
+            height: 10px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+        .vote-count-fill {
+            background-color: #6366f1; /* Indigo-500 */
+            height: 100%;
+            transition: width 0.3s ease-in-out;
+        }
+        .message-box {
+            background-color: #ecfdf5; /* Green-50 */
+            border-left: 4px solid #10b981; /* Green-500 */
+            color: #065f46; /* Green-700 */
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none; /* Hidden by default */
+        }
+        .message-box.error {
+            background-color: #fee2e2; /* Red-50 */
+            border-left-color: #ef4444; /* Red-500 */
+            color: #991b1b; /* Red-700 */
+        }
+        /* Responsive adjustments */
+        @media (max-width: 640px) {
+            .container {
+                padding: 20px;
+            }
+            .grid-cols-2 {
+                grid-template-columns: 1fr;
+            }
+            .slot-grid {
+                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">Uniworld to IIITB Bus Travel Slot Selector</h1>
+
+        <!-- Roll Number Input -->
+        <div class="mb-6">
+            <label for="rollNumber" class="block text-gray-700 text-sm font-semibold mb-2">Your Roll Number:</label>
+            <input type="text" id="rollNumber" placeholder="e.g., MT2025016 or 25016"
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-800">
+        </div>
+
+        <!-- Date Selection -->
+        <div class="mb-8">
+            <label class="block text-gray-700 text-sm font-semibold mb-3">Select Travel Day:</label>
+            <div class="flex space-x-4">
+                <div class="date-option flex-1">
+                    <input type="radio" id="today" name="travelDay" value="today" class="hidden" checked>
+                    <label for="today" class="block w-full text-center px-4 py-3 border border-gray-300 rounded-lg cursor-pointer transition duration-200 ease-in-out hover:bg-gray-100 text-gray-700 font-medium">
+                        Today (<span id="todayDate"></span>)
+                    </label>
+                </div>
+                <div class="date-option flex-1">
+                    <input type="radio" id="tomorrow" name="travelDay" value="tomorrow" class="hidden">
+                    <label for="tomorrow" class="block w-full text-center px-4 py-3 border border-gray-300 rounded-lg cursor-pointer transition duration-200 ease-in-out hover:bg-gray-100 text-gray-700 font-medium">
+                        Tomorrow (<span id="tomorrowDate"></span>)
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Time Slot Selection -->
+        <div class="mb-8">
+            <label class="block text-gray-700 text-sm font-semibold mb-3">Select Your Bus Time Slot:</label>
+            <div id="slotButtons" class="grid grid-cols-2 md:grid-cols-3 gap-4 slot-grid">
+                <!-- Buttons will be dynamically generated here -->
+            </div>
+        </div>
+
+        <!-- Create New Slot -->
+        <div class="mb-8 p-4 bg-indigo-50 rounded-lg shadow-inner">
+            <h2 class="text-xl font-bold text-indigo-700 mb-3">Create a New Bus Slot</h2>
+            <div class="flex flex-col sm:flex-row gap-3">
+                <input type="text" id="newSlotTimeInput" placeholder="e.g., 20:00 or 8:00 PM"
+                       class="flex-grow px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-800">
+                <button id="createNewSlotButton"
+                        class="px-6 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition duration-200 ease-in-out">
+                    Add New Slot
+                </button>
+            </div>
+            <p class="text-sm text-gray-600 mt-2">Enter a unique time slot (e.g., "10:15 AM").</p>
+        </div>
+
+        <!-- Go to IIITB -> Uniworld Button -->
+        <div class="mb-8 text-center">
+            <a href="college.html"
+               class="inline-block px-8 py-3 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition duration-200 ease-in-out">
+                Go to IIITB -> Uniworld
+            </a>
+        </div>
+
+        <!-- Message Box -->
+        <div id="messageBox" class="message-box"></div>
+
+        <!-- Vote Counts Display -->
+        <div>
+            <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">Current Vote Counts</h2>
+            <div id="voteCountsDisplay" class="space-y-6">
+                <!-- Vote counts will be displayed here -->
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Firebase imports - Updated to SDK version 12.0.0
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc, collection, query, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+
+        // Your web app's Firebase configuration - Directly using the provided config
+        const firebaseConfig = {
+            apiKey: "AIzaSyDd4DshgG-d0kSm5p5tNCmuF8BbZH-Sf0A",
+            authDomain: "bus-voting-app.firebaseapp.com",
+            projectId: "bus-voting-app",
+            storageBucket: "bus-voting-app.firebasestorage.app",
+            messagingSenderId: "949586798767",
+            appId: "1:949586798767:web:5976f1317cf4a0883b4c5a"
+        };
+
+        // Derive appId from projectId for Firestore paths
+        const appId = firebaseConfig.projectId;
+
+        let app, db, auth, userId = null;
+        let isAuthReady = false; // Flag to ensure auth is ready before Firestore ops
+
+        // Predefined bus time slots
+        const predefinedBusTimeSlots = [
+            "07:00", "07:30", "08:00", "08:30", "09:00", "09:30",
+            "10:30", "11:30", "12:30", "13:30", "14:30", "15:30",
+            "16:30", "17:30", "18:30", "19:30", "21:00"
+        ];
+        let customBusSlots = []; // To store dynamically added custom slots
+        let allAvailableSlots = []; // Combination of predefined and custom slots
+
+        // DOM elements
+        const rollNumberInput = document.getElementById('rollNumber');
+        const todayDateSpan = document.getElementById('todayDate');
+        const tomorrowDateSpan = document.getElementById('tomorrowDate');
+        const dateRadios = document.querySelectorAll('input[name="travelDay"]');
+        const slotButtonsContainer = document.getElementById('slotButtons');
+        const voteCountsDisplay = document.getElementById('voteCountsDisplay');
+        const messageBox = document.getElementById('messageBox');
+        const newSlotTimeInput = document.getElementById('newSlotTimeInput');
+        const createNewSlotButton = document.getElementById('createNewSlotButton');
+
+        let selectedSlot = null; // To keep track of the currently selected slot by the user
+
+        /**
+         * Initializes Firebase and sets up authentication.
+         */
+        async function initializeFirebase() {
+            try {
+                // Log the config to ensure projectId is present before initialization
+                console.log("Firebase Config before initialization:", firebaseConfig);
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                // Listen for auth state changes
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        console.log("Firebase Authenticated. User ID:", userId);
+                        isAuthReady = true;
+                        // Once authenticated, start listening for vote updates and custom slots
+                        setupRealtimeListeners();
+                    } else {
+                        // Sign in anonymously if no user is found
+                        try {
+                            await signInAnonymously(auth);
+                        } catch (error) {
+                            console.error("Error during anonymous sign-in:", error);
+                            // Specific error handling for auth/configuration-not-found
+                            if (error.code === 'auth/configuration-not-found') {
+                                showMessage("Error: Firebase Authentication is not configured or Anonymous Sign-in is not enabled in your Firebase project. Please enable it in the Firebase Console (Authentication -> Sign-in method).", true);
+                            } else {
+                                showMessage("Error signing in. Please try again.", true);
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error("Error initializing Firebase:", error);
+                showMessage("Failed to initialize the application. Please check console for details.", true);
+            }
+        }
+
+        /**
+         * Displays a message to the user.
+         * @param {string} message - The message to display.
+         * @param {boolean} isError - True if it's an error message, false otherwise.
+         */
+        function showMessage(message, isError = false) {
+            messageBox.textContent = message;
+            messageBox.classList.remove('error');
+            if (isError) {
+                messageBox.classList.add('error');
+            }
+            messageBox.style.display = 'block'; // Ensure it's visible
+            setTimeout(() => {
+                messageBox.style.display = 'none'; // Hide after 5 seconds
+            }, 5000);
+        }
+
+        /**
+         * Formats a date object into 'YYYY-MM-DD' string.
+         * @param {Date} date - The date object.
+         * @returns {string} Formatted date string.
+         */
+        function formatDate(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        /**
+         * Gets today's and tomorrow's date and updates the UI.
+         */
+        function updateDates() {
+            const today = new Date();
+            const tomorrow = new Date();
+            tomorrow.setDate(today.getDate() + 1);
+
+            todayDateSpan.textContent = formatDate(today);
+            tomorrowDateSpan.textContent = formatDate(tomorrow);
+        }
+
+        /**
+         * Gets the currently selected date (Today or Tomorrow) in YYYY-MM-DD format.
+         * @returns {string} The selected date.
+         */
+        function getSelectedDate() {
+            const selectedRadio = document.querySelector('input[name="travelDay"]:checked');
+            const today = new Date();
+            const tomorrow = new Date();
+            tomorrow.setDate(today.getDate() + 1);
+
+            return selectedRadio.value === 'today' ? formatDate(today) : formatDate(tomorrow);
+        }
+
+        /**
+         * Generates the time slot buttons based on allAvailableSlots and attaches click listeners.
+         */
+        function generateSlotButtons() {
+            slotButtonsContainer.innerHTML = ''; // Clear existing buttons
+            // Sort slots for consistent display
+            const sortedSlots = [...allAvailableSlots].sort((a, b) => {
+                // Simple string comparison might not work for all time formats (e.g., "7:00 AM" vs "1:00 PM")
+                // For "HH:MM" format, string comparison works. For "HH:MM AM/PM", more complex parsing needed.
+                // Assuming "HH:MM" or similar for now.
+                return a.localeCompare(b);
+            });
+
+            sortedSlots.forEach(slot => {
+                const button = document.createElement('button');
+                button.textContent = slot;
+                button.className = 'slot-button px-4 py-3 border border-gray-300 rounded-lg text-gray-700 font-medium text-sm md:text-base transition duration-200 ease-in-out hover:bg-indigo-50 hover:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500';
+                button.setAttribute('data-slot', slot);
+                button.addEventListener('click', () => handleSlotSelection(slot, button));
+                slotButtonsContainer.appendChild(button);
+            });
+
+            // Re-highlight the selected slot if it exists
+            if (selectedSlot) {
+                const currentSelectedButton = document.querySelector(`.slot-button[data-slot="${selectedSlot}"]`);
+                if (currentSelectedButton) {
+                    currentSelectedButton.classList.add('selected');
+                }
+            }
+        }
+
+        /**
+         * Handles the selection of a time slot.
+         * @param {string} slot - The selected time slot string.
+         * @param {HTMLElement} clickedButton - The button element that was clicked.
+         */
+        function handleSlotSelection(slot, clickedButton) {
+            // Remove 'selected' class from all buttons
+            document.querySelectorAll('.slot-button').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+
+            // Add 'selected' class to the clicked button
+            clickedButton.classList.add('selected');
+            selectedSlot = slot; // Update the global selectedSlot variable
+            console.log("Selected slot:", selectedSlot);
+            submitVote(); // Automatically submit vote on slot selection
+        }
+
+        /**
+         * Submits the student's vote to Firebase.
+         */
+        async function submitVote() {
+            if (!isAuthReady) {
+                showMessage("Authentication not ready. Please wait.", true);
+                return;
+            }
+
+            const rollNumber = rollNumberInput.value.trim();
+            const selectedDate = getSelectedDate();
+
+            if (!rollNumber) {
+                showMessage("Please enter your Roll Number.", true);
+                return;
+            }
+            if (!selectedSlot) {
+                showMessage("Please select a bus time slot.", true);
+                return;
+            }
+
+            try {
+                // Construct the document reference using the roll number as the ID
+                const voteDocRef = doc(db, `artifacts/${appId}/public/data/busVotes`, rollNumber);
+
+                // Data to save/update
+                const voteData = {
+                    rollNumber: rollNumber,
+                    selectedDate: selectedDate,
+                    selectedSlot: selectedSlot,
+                    timestamp: Date.now(), // Use client timestamp for simplicity, Firestore server timestamp is also an option
+                    userId: userId // Store userId for security rules, though rollNumber is the primary key for uniqueness here
+                };
+
+                await setDoc(voteDocRef, voteData, { merge: true }); // Merge ensures existing fields are kept if not specified
+
+                showMessage(`Vote for ${selectedSlot} on ${selectedDate} submitted successfully!`);
+                console.log("Vote submitted:", voteData);
+
+            } catch (error) {
+                console.error("Error submitting vote:", error);
+                showMessage("Error submitting your vote. Please try again.", true);
+            }
+        }
+
+        /**
+         * Sets up real-time listeners for both votes and custom slots.
+         */
+        function setupRealtimeListeners() {
+            if (!db) {
+                console.error("Firestore not initialized for listeners.");
+                return;
+            }
+
+            // Listener for custom bus slots
+            const customSlotsCollectionRef = collection(db, `artifacts/${appId}/public/data/customBusSlots`);
+            onSnapshot(customSlotsCollectionRef, (snapshot) => {
+                customBusSlots = [];
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    if (data.slotTime) {
+                        customBusSlots.push(data.slotTime);
+                    }
+                });
+                // Combine predefined and custom slots, remove duplicates, and update UI
+                updateAllAvailableSlotsAndUI();
+                console.log("Custom slots updated:", customBusSlots);
+            }, (error) => {
+                console.error("Error listening to custom slots:", error);
+                showMessage("Failed to load custom bus slots.", true);
+            });
+
+            // Listener for bus votes
+            const busVotesCollectionRef = collection(db, `artifacts/${appId}/public/data/busVotes`);
+            const q = query(busVotesCollectionRef);
+
+            onSnapshot(q, (snapshot) => {
+                const votesByDateAndSlot = {};
+
+                // Initialize counts for all dates and slots
+                const todayFormatted = formatDate(new Date());
+                const tomorrow = new Date();
+                tomorrow.setDate(new Date().getDate() + 1);
+                const tomorrowFormatted = formatDate(tomorrow);
+
+                [todayFormatted, tomorrowFormatted].forEach(date => {
+                    votesByDateAndSlot[date] = {};
+                    allAvailableSlots.forEach(slot => { // Use allAvailableSlots here
+                        votesByDateAndSlot[date][slot] = 0;
+                    });
+                });
+
+                // Aggregate votes from snapshot
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const date = data.selectedDate;
+                    const slot = data.selectedSlot;
+
+                    if (votesByDateAndSlot[date] && votesByDateAndSlot[date][slot] !== undefined) {
+                        votesByDateAndSlot[date][slot]++;
+                    }
+                });
+
+                console.log("Aggregated Votes:", votesByDateAndSlot);
+                renderVoteCounts(votesByDateAndSlot);
+            }, (error) => {
+                console.error("Error listening to votes:", error);
+                showMessage("Failed to load real-time vote counts.", true);
+            });
+        }
+
+        /**
+         * Combines predefined and custom slots, removes duplicates, and updates UI.
+         */
+        function updateAllAvailableSlotsAndUI() {
+            const combinedSlots = [...predefinedBusTimeSlots, ...customBusSlots];
+            allAvailableSlots = [...new Set(combinedSlots)]; // Remove duplicates
+            generateSlotButtons(); // Re-generate buttons with updated slots
+            // Trigger a re-render of vote counts if needed (listener will handle this usually)
+        }
+
+        /**
+         * Renders the vote counts on the UI.
+         * @param {object} votesByDateAndSlot - Object containing aggregated vote counts.
+         */
+        function renderVoteCounts(votesByDateAndSlot) {
+            voteCountsDisplay.innerHTML = ''; // Clear previous counts
+
+            const today = new Date();
+            const tomorrow = new Date();
+            tomorrow.setDate(today.getDate() + 1);
+
+            const datesToDisplay = [
+                { label: `Today (${formatDate(today)})`, key: formatDate(today) },
+                { label: `Tomorrow (${formatDate(tomorrow)})`, key: formatDate(tomorrow) }
+            ];
+
+            datesToDisplay.forEach(day => {
+                const dateKey = day.key;
+                const dailyVotes = votesByDateAndSlot[dateKey] || {};
+                const totalVotesForDay = Object.values(dailyVotes).reduce((sum, count) => sum + count, 0);
+
+                const dateSection = document.createElement('div');
+                dateSection.className = 'bg-gray-50 p-4 rounded-lg shadow-sm';
+                dateSection.innerHTML = `
+                    <h3 class="text-xl font-semibold text-gray-700 mb-3">${day.label}</h3>
+                    <div class="space-y-3"></div>
+                `;
+                const slotsContainer = dateSection.querySelector('div.space-y-3');
+
+                // Use allAvailableSlots for rendering counts to ensure custom slots are included
+                const sortedSlotsForDisplay = [...allAvailableSlots].sort((a, b) => a.localeCompare(b));
+
+                sortedSlotsForDisplay.forEach(slot => {
+                    const count = dailyVotes[slot] || 0;
+                    const percentage = totalVotesForDay > 0 ? (count / totalVotesForDay) * 100 : 0;
+
+                    const slotItem = document.createElement('div');
+                    slotItem.className = 'flex items-center space-x-3';
+                    slotItem.innerHTML = `
+                        <span class="text-gray-600 w-32 flex-shrink-0">${slot}</span>
+                        <div class="flex-grow">
+                            <div class="vote-count-bar">
+                                <div class="vote-count-fill" style="width: ${percentage}%"></div>
+                            </div>
+                        </div>
+                        <span class="text-gray-800 font-semibold w-8 text-right">${count}</span>
+                    `;
+                    slotsContainer.appendChild(slotItem);
+                });
+                voteCountsDisplay.appendChild(dateSection);
+            });
+        }
+
+        /**
+         * Handles adding a new custom time slot.
+         */
+        createNewSlotButton.addEventListener('click', async () => {
+            if (!isAuthReady) {
+                showMessage("Authentication not ready. Please wait.", true);
+                return;
+            }
+
+            const newSlot = newSlotTimeInput.value.trim();
+            if (!newSlot) {
+                showMessage("Please enter a time for the new slot.", true);
+                return;
+            }
+
+            // Check if the slot already exists (predefined or custom)
+            if (allAvailableSlots.includes(newSlot)) {
+                showMessage(`Slot "${newSlot}" already exists.`, true);
+                return;
+            }
+
+            try {
+                const customSlotDocRef = doc(db, `artifacts/${appId}/public/data/customBusSlots`, newSlot);
+                await setDoc(customSlotDocRef, { slotTime: newSlot, createdAt: Date.now(), createdBy: userId });
+                showMessage(`New slot "${newSlot}" added successfully!`);
+                newSlotTimeInput.value = ''; // Clear input
+            } catch (error) {
+                console.error("Error adding new slot:", error);
+                showMessage("Error adding new slot. Please try again.", true);
+            }
+        });
+
+
+        // Event listener for date radio buttons to trigger re-rendering of selected slot
+        dateRadios.forEach(radio => {
+            radio.addEventListener('change', () => {
+                // If a slot was previously selected, re-highlight it for the new day
+                if (selectedSlot) {
+                    const currentSelectedButton = document.querySelector(`.slot-button[data-slot="${selectedSlot}"]`);
+                    if (currentSelectedButton) {
+                        // This effectively re-applies the 'selected' class based on the stored selectedSlot
+                        // No need to remove from others as the submitVote will handle it
+                        document.querySelectorAll('.slot-button').forEach(btn => btn.classList.remove('selected'));
+                        currentSelectedButton.classList.add('selected');
+                    }
+                }
+                // Also trigger a vote submission if a slot is already selected and the date changes
+                if (selectedSlot && rollNumberInput.value.trim()) {
+                    submitVote();
+                }
+            });
+        });
+
+        // Initialize on window load
+        window.onload = function() {
+            updateDates();
+            // Initial call to update all available slots and generate buttons
+            updateAllAvailableSlotsAndUI();
+            initializeFirebase(); // Initialize Firebase and authentication
+        };
+
+    </script>
+</body>
+</html>
